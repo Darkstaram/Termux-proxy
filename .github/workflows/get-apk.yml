@@ -1,0 +1,27 @@
+name: Fetch Termux API Debug APK
+
+on:
+  workflow_dispatch:   # این اجازه میده دستی از تب Actions اجراش کنی
+
+permissions:
+  contents: write      # لازم برای Push کردن فایل به مخزن
+
+jobs:
+  fetch-and-commit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download Debug APK from official release
+        run: |
+          curl -L -o termux-api-debug.apk \
+            https://github.com/termux/termux-api/releases/download/v0.53.0/termux-api-app_v0.53.0+github.debug.apk
+
+      - name: Commit and push to repository
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add termux-api-debug.apk
+          git commit -m "Update termux-api debug APK" || echo "No changes to commit"
+          git push
