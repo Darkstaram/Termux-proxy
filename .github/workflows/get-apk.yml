@@ -1,10 +1,10 @@
-name: Fetch Termux API Debug APK
+name: Fetch Termux API from F-Droid
 
 on:
-  workflow_dispatch:   # این اجازه میده دستی از تب Actions اجراش کنی
+  workflow_dispatch:
 
 permissions:
-  contents: write      # لازم برای Push کردن فایل به مخزن
+  contents: write
 
 jobs:
   fetch-and-commit:
@@ -13,15 +13,15 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Download Debug APK from official release
+      - name: Download Termux API APK from F-Droid repository
         run: |
-          curl -L -o termux-api-debug.apk \
-            https://github.com/termux/termux-api/releases/download/v0.53.0/termux-api-app_v0.53.0+github.debug.apk
+          curl -L -o termux-api.apk \
+            https://f-droid.org/repo/com.termux.api_53.apk
 
       - name: Commit and push to repository
         run: |
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
-          git add termux-api-debug.apk
-          git commit -m "Update termux-api debug APK" || echo "No changes to commit"
+          git add termux-api.apk
+          git commit -m "Update termux-api APK from F-Droid" || echo "No changes to commit"
           git push
