@@ -1,0 +1,56 @@
+name: Proxy F-Droid to get Termux API APK
+
+on:
+  workflow_dispatch:          # اجرای دستی
+  schedule:
+    - cron: '0 6 * * *'      # هر روز ساعت ۶ صبح UTC بررسی کند (اختیاری)
+
+permissions:
+  contents: write
+
+jobs:
+  fetch-from-fdroid:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Fetch APK link from F-Droid and download
+        run: |
+          # 1. صفحه مربوط به Termux API را دریافت کن
+          PAGE_URL="https://f-droid.org/en/packages/com.termux.api/"
+          HTML=$(curl -sL "$PAGE_URL")
+
+          # 2. لینک دانلود APK را از داخل HTML استخراج کن
+          #    معمولاً لینک داخل تگی شبیه این است:
+          #    <a href="https://f-droid.org/repo/com.termux.api_XX.apk">
+          #    یا در صفحه به صورت ../repo/... آمده است.
+          #    ما با یک regex ساده لینکی که به com.termux.api ختم می‌شود را پیدا می‌کنیم.
+          APK_URL=$(echo "$HTML" | grep -oP 'https://f-droid\.org/repo/com\.termux\.api_[0-9]+\.apk' | head -1)
+
+          # اگر لینک با مسیر نسبی بود، اینو هم چک کن
+          if [ -z "$APK_URL" ]; then
+            RELATIVE=$(echo "$HTML" | grep -oP '../repo/com\.termux\.api_[0-9]+\.apk' | head -1)
+            if [ -n "$RELATIVE" ]; then
+              APK_URL="https://f-droid.org${RELATIVE#..}"
+            fi
+          fi
+
+          # 3. اگر لینکی پیدا نشد، خطا بده
+          if [ -z "$APK_URL" ]; then
+            echo "Error: Could not find APK link on F-Droid page."
+            exit 1
+          fi
+
+          echo "Found APK URL: $APK_URL"
+
+          # 4. دانلود فایل APK
+          curl -L -o termux-api.apk "$APK_URL"
+
+      - name: Commit and push APK to repository
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add termux-api.apk
+          git commit -m "Update Termux API APK from F-Droid (auto)" || echo "No changes to commit"
+          git push
