@@ -1,0 +1,49 @@
+name: Download Playing God (Multi-Source)
+
+on:
+  workflow_dispatch:   # فقط با کلیک دستی اجرا می‌شود
+
+permissions:
+  contents: write
+
+jobs:
+  download:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup yt-dlp and ffmpeg
+        run: |
+          python3 -m pip install --upgrade yt-dlp
+          sudo apt-get update && sudo apt-get install -y ffmpeg
+
+      - name: Download "Playing God" with fallback sources and cover art
+        run: |
+          mkdir -p music
+          QUERY="Motionless In White - Playing God ft. Corey Taylor"
+          echo "Searching for: $QUERY"
+          # اولویت: SoundCloud → Bandcamp → Free Music Archive → YouTube
+          for prefix in "scsearch" "bcsearch" "freemusicarchive" "ytsearch"; do
+            echo "  -> Trying source: $prefix"
+            if yt-dlp \
+              --extract-audio \
+              --audio-format mp3 \
+              --audio-quality 0 \
+              --embed-thumbnail \
+              --output "music/%(title)s.%(ext)s" \
+              "${prefix}:${QUERY}" ; then
+              echo "  -> SUCCESS with $prefix"
+              break
+            else
+              echo "  -> FAILED with $prefix, moving to next..."
+            fi
+          done
+
+      - name: Commit and push the audio file
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add music/*.mp3
+          git commit -m "Add Playing God (multi-source)" || echo "No changes to commit"
+          git push
