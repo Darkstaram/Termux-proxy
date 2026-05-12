@@ -1,36 +1,40 @@
-name: Download Playing God
+name: Debug Download Playing God
 
 on:
   workflow_dispatch:
 
-permissions:
-  contents: write
-
 jobs:
-  download:
+  debug:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
       - name: Setup yt-dlp and ffmpeg
         run: |
           python3 -m pip install --upgrade yt-dlp
           sudo apt-get update && sudo apt-get install -y ffmpeg
+          echo "yt-dlp version: $(yt-dlp --version)"
 
-      - name: Download audio from YouTube search
+      - name: Try download with verbose logging
         run: |
+          mkdir -p music
+          QUERY="Motionless In White - Playing God ft. Corey Taylor"
+          echo "Searching for: $QUERY"
+          # فقط یوتیوب را تست می‌کنیم چون شناخته‌شده‌تر است
           yt-dlp \
+            --verbose \
             --extract-audio \
             --audio-format mp3 \
             --audio-quality 0 \
-            --output "Playing_God.%(ext)s" \
-            "ytsearch1:Motionless In White - Playing God ft. Corey Taylor"
+            --embed-thumbnail \
+            --output "music/%(title)s.%(ext)s" \
+            "ytsearch1:${QUERY}" || echo "FAILED"
 
-      - name: Commit and push to repo
-        run: |
-          git config user.name "github-actions"
-          git config user.email "github-actions@github.com"
-          git add "Playing_God.mp3"
-          git commit -m "Add Playing God" || echo "No changes"
-          git push
+          echo "=== Files in music/ ==="
+          ls -la music/ || echo "No files"
+
+      - name: Upload artifact if file exists
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: debug-files
+          path: music/*.mp3
+          retention-days: 3
