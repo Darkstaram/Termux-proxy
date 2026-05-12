@@ -1,0 +1,36 @@
+name: Download Playing God
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  download:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup yt-dlp and ffmpeg
+        run: |
+          python3 -m pip install --upgrade yt-dlp
+          sudo apt-get update && sudo apt-get install -y ffmpeg
+
+      - name: Download audio from YouTube search
+        run: |
+          yt-dlp \
+            --extract-audio \
+            --audio-format mp3 \
+            --audio-quality 0 \
+            --output "Playing_God.%(ext)s" \
+            "ytsearch1:Motionless In White - Playing God ft. Corey Taylor"
+
+      - name: Commit and push to repo
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add "Playing_God.mp3"
+          git commit -m "Add Playing God" || echo "No changes"
+          git push
